@@ -13,6 +13,8 @@ MODEL = "qwen2.5-coder:7b"
 URL = "http://localhost:11434/api/chat"
 RUNS_PER_TASK = 5
 MAX_STEPS = 10
+VARIANT = "edge_cases"
+HINT = " Before you say done, think about edge cases that the visible tests may not cover, and make sure your code handles them."
 TEST_TIMEOUT = 10  # seconds
 SANDBOX_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sandbox_runner.py")
 
@@ -93,7 +95,7 @@ def run_agent(task):
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": task["goal"]},
+        {"role": "user", "content": task["goal"] + HINT},
     ]
     steps = []
     tokens = 0
@@ -192,6 +194,7 @@ def main():
             print(f"Agent on {task['name']} (run {run}/{RUNS_PER_TASK})...")
             result = run_agent(task)
             result["run"] = run
+            result["variant"] = VARIANT
             results.append(result)
             print(
                 f"  hidden tests {result['hidden_passed']}/{result['hidden_total']}, "

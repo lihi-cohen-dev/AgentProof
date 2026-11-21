@@ -27,6 +27,16 @@ In `fix_split_bill` the agent ran the tests in every single run, saw them pass, 
 
 **3. One run is not enough.** A single run of a task can look like bad luck. Five runs of `fix_split_bill` show a consistent pattern.
 
+**4. Telling the agent to "think about edge cases" did not fix it.**
+I ran the same 15 runs again, with one sentence added to every task: *"Before you say done, think about edge cases that the visible tests may not cover, and make sure your code handles them."* Nothing else changed.
+
+| | Said "done" | Wrong when it said "done" |
+|---|---|---|
+| Without the hint | 11 | 7 (64%) |
+| With the hint | 8 | 5 (63%) |
+
+In `fix_split_bill` the agent still claimed success in 5 of 5 runs, and the code was still broken every time. In `fix_next_bus` the hint made it more careful (no false success) but it also fixed the bug less often (3/5 instead of 4/5). A single prompt sentence made the agent say "done" less often, but not more correct when it did.
+
 ## How the agent works
 
 ```mermaid
@@ -78,6 +88,7 @@ Requirements: Python 3 and [Ollama](https://ollama.com).
 ollama pull qwen2.5-coder:7b
 
 python agent.py                           # agent benchmark (set RUNS_PER_TASK in agent.py)
+# The edge-case hint is set by HINT in agent.py. Set HINT = "" to run without it.
 python show_agent_runs.py fix_split_bill  # replay every step of the agent on one task
 
 python runner.py                          # single-answer benchmark
@@ -101,14 +112,14 @@ python show_failures.py                   # code of every failed single answer
 - [x] Agent mode with tools, visible and hidden tests
 - [x] False-success metric
 - [x] Process isolation and time limits for model code
+- [x] Prompt experiment: does telling the agent "think about edge cases" reduce false success? (It did not.)
 - [ ] More tasks, and more runs per task, for stronger statistics
 - [ ] Compare several models on the same tasks
-- [ ] Prompt experiments: does telling the agent "think about edge cases" reduce false success?
 - [ ] Full sandbox (container) for model code
 
 ## Limits
 
-These results come from one small model, 3 agent tasks and 15 runs. They show that false success happens and what it looks like, not how often it happens for AI agents in general.
+These results come from one small model, 3 agent tasks and 15 runs per setting. They show that false success happens and what it looks like, not how often it happens for AI agents in general.
 
 ## Tech
 
