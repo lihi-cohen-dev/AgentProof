@@ -11,7 +11,7 @@ from agent_tasks import AGENT_TASKS
 
 MODEL = "qwen2.5-coder:7b"
 URL = "http://localhost:11434/api/chat"
-RUNS_PER_TASK = 1
+RUNS_PER_TASK = 5
 MAX_STEPS = 10
 TEST_TIMEOUT = 10  # seconds
 SANDBOX_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sandbox_runner.py")
@@ -122,7 +122,10 @@ def run_agent(task):
                 break
             result = do_action(action, folder, task)
 
-        steps.append({"step": step, "action": action.get("action"), "result": result[:300]})
+        record = {"step": step, "action": action.get("action"), "result": result[:300]}
+        if action.get("action") == "write_file":
+            record["content"] = action.get("content")
+        steps.append(record)
         print(f"    step {step}: {action.get('action')}")
         messages.append({"role": "user", "content": f"Result:\n{result}"})
 
