@@ -53,4 +53,52 @@ TASKS = [
             (("aabbaa",), "a2b2a2"),
         ],
     },
+    {
+        "name": "next_bus",
+        "function": "next_bus",
+        "prompt": "Write a Python function next_bus(times, now). times is a list of departure times as 'HH:MM' strings, not necessarily sorted. now is a 'HH:MM' string. Return the first departure at or after now. If there are no more departures today, return the earliest departure (tomorrow's first bus).",
+        "tests": [
+            ((["08:15", "07:30", "09:00"], "08:00"), "08:15"),
+            ((["08:15", "07:30", "09:00"], "08:15"), "08:15"),
+            ((["08:15", "07:30", "09:00"], "09:01"), "07:30"),
+            ((["23:59"], "00:00"), "23:59"),
+            ((["10:05", "10:50", "10:15"], "10:06"), "10:15"),
+        ],
+    },
+    {
+        "name": "decode",
+        "function": "decode",
+        "prompt": "Write a Python function decode(s). Each letter in s may be followed by a number saying how many times it repeats, for example 'a3b12' becomes 'aaa' followed by twelve 'b'. A letter with no number after it appears once.",
+        "tests": [
+            (("a3b2",), "aaabb"),
+            (("x12",), "xxxxxxxxxxxx"),
+            (("abc",), "abc"),
+            (("",), ""),
+            (("a1b10",), "abbbbbbbbbb"),
+        ],
+    },
+    {
+        "name": "weekday_after",
+        "function": "weekday_after",
+        "prompt": "Write a Python function weekday_after(day, n). day is an English weekday name like 'Monday'. Return the weekday name n days later. n can be negative or very large.",
+        "tests": [
+            (("Monday", 1), "Tuesday"),
+            (("Sunday", 1), "Monday"),
+            (("Monday", -1), "Sunday"),
+            (("Friday", 700), "Friday"),
+            (("Wednesday", -10), "Sunday"),
+        ],
+    },
+    {
+        "name": "split_bill",
+        "function": "split_bill",
+        "prompt": "Write a Python function split_bill(total, people). total is a whole number of cents. Split it among people as evenly as possible and return a list of whole numbers that sums exactly to total, with the larger amounts first.",
+        "tests": [
+            ((100, 3), [34, 33, 33]),
+            ((10, 4), [3, 3, 2, 2]),
+            ((0, 2), [0, 0]),
+            ((5, 5), [1, 1, 1, 1, 1]),
+            ((7, 1), [7]),
+        ],
+    },
 ]
