@@ -37,6 +37,8 @@ I ran the same 15 runs again, with one sentence added to every task: *"Before yo
 
 In `fix_split_bill` the agent still claimed success in 5 of 5 runs, and the code was still broken every time. In `fix_next_bus` the hint made it more careful (no false success) but it also fixed the bug less often (3/5 instead of 4/5). A single prompt sentence made the agent say "done" less often, but not more correct when it did.
 
+![False success and fixes, with and without the hint](agent_results_chart.png)
+
 ## How the agent works
 
 ```mermaid
