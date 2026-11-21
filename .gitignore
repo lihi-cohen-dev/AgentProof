@@ -1,2 +1,3 @@
 __pycache__/
 results_*.json
+agent_results_*.json
