@@ -27,6 +27,13 @@ for r in results:
     print(f"{r['task']} (run {r['run']}): {verdict}")
     print(f"Hidden tests: {r['hidden_passed']}/{r['hidden_total']}, steps: {r['steps']}, "
           f"time: {r['seconds']}s, tokens: {r['tokens']}")
+
+    own = r.get("own_tests_list")
+    if own is not None:
+        print(f"Tests the agent wrote for itself: {len(own)}")
+        for args, expected in own:
+            print(f"   {r['task'].replace('fix_', '')}{tuple(args)} should return {expected!r}")
+        print(f"Did one of them check a hidden edge case? {'YES' if r.get('tested_a_hidden_edge_case') else 'no'}")
     print("=" * 60)
 
     for s in r["history"]:

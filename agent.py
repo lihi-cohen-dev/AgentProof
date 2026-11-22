@@ -13,8 +13,8 @@ MODEL = "qwen2.5-coder:7b"
 URL = "http://localhost:11434/api/chat"
 RUNS_PER_TASK = 5
 MAX_STEPS = 10
-VARIANT = "edge_cases"
-HINT = " Before you say done, think about edge cases that the visible tests may not cover, and make sure your code handles them."
+VARIANT = "self_tests"
+HINT = " The visible tests do not cover everything. Before you say done, use add_test to add your own tests for edge cases, run the tests, and fix any failures."
 TEST_TIMEOUT = 10  # seconds
 SANDBOX_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sandbox_runner.py")
 
@@ -23,6 +23,7 @@ You act by replying with exactly ONE JSON object per message. The available acti
 
 {"action": "read_file", "path": "solution.py"}
 {"action": "write_file", "path": "solution.py", "content": "<the full new file content>"}
+{"action": "add_test", "args": [<arguments for the function>], "expected": <the correct return value>}
 {"action": "run_tests"}
 {"action": "done", "message": "<short summary of what you did>"}
 
@@ -58,7 +59,7 @@ def run_tests_in_sandbox(folder, task, tests):
         return {"passed": 0, "total": len(tests), "failures": [], "error": f"runner failed: {error}"}
 
 
-def do_action(action, folder, task):
+def do_action(action, folder, task, my_tests):
     """Carry out one action of the agent. Returns the text the agent will see."""
     name = action.get("action")
     path = action.get("path", "solution.py")
@@ -76,14 +77,25 @@ def do_action(action, folder, task):
         with open(full_path, "w", encoding="utf-8") as file:
             file.write(content)
         return "File written."
+    if name == "add_test":
+        args, expected = action.get("args"), action.get("expected", None)
+        if not isinstance(args, list) or "expected" not in action:
+            return "Error: add_test needs 'args' (a list) and 'expected'."
+        my_tests.append([args, expected])
+        return f"Test added. You now have {len(my_tests)} test(s) of your own."
     if name == "run_tests":
-        report = run_tests_in_sandbox(folder, task, task["visible_tests"])
-        text = f"{report['passed']}/{report['total']} tests passed."
-        if report["error"]:
-            text += f" Error: {report['error']}"
-        for failure in report["failures"]:
-            text += f"\nFailed: input {failure['input']}, expected {failure['expected']!r}, got {failure['got']}"
-        return text
+        text = ""
+        for label, tests in (("Given tests", task["visible_tests"]), ("Your own tests", my_tests)):
+            if not tests:
+                continue
+            report = run_tests_in_sandbox(folder, task, tests)
+            text += f"{label}: {report['passed']}/{report['total']} passed."
+            if report["error"]:
+                text += f" Error: {report['error']}"
+            for failure in report["failures"]:
+                text += f"\nFailed: input {failure['input']}, expected {failure['expected']!r}, got {failure['got']}"
+            text += "\n"
+        return text.strip()
     return f"Error: unknown action {name!r}."
 
 
@@ -98,6 +110,7 @@ def run_agent(task):
         {"role": "user", "content": task["goal"] + HINT},
     ]
     steps = []
+    my_tests = []
     tokens = 0
     claimed_done = False
     invalid_replies = 0
@@ -122,7 +135,7 @@ def run_agent(task):
                 steps.append({"step": step, "action": "done", "message": action.get("message", "")})
                 print(f"    step {step}: done")
                 break
-            result = do_action(action, folder, task)
+            result = do_action(action, folder, task, my_tests)
 
         record = {"step": step, "action": action.get("action"), "result": result[:300]}
         if action.get("action") == "write_file":
@@ -136,6 +149,8 @@ def run_agent(task):
         final_code = file.read()
 
     actions = [s["action"] for s in steps]
+    visible_inputs = [list(args) for args, _ in task["visible_tests"]]
+    edge_inputs = [list(args) for args, _ in task["hidden_tests"] if list(args) not in visible_inputs]
     return {
         "task": task["name"],
         "claimed_done": claimed_done,
@@ -143,6 +158,9 @@ def run_agent(task):
         "hidden_total": hidden["total"],
         "false_success": claimed_done and hidden["passed"] < hidden["total"],
         "ran_tests": "run_tests" in actions,
+        "own_tests": len(my_tests),
+        "own_tests_list": my_tests,
+        "tested_a_hidden_edge_case": any(args in edge_inputs for args, _ in my_tests),
         "steps": len(steps),
         "invalid_replies": invalid_replies,
         "repeated_actions": count_repeats(steps),
@@ -164,14 +182,14 @@ def count_repeats(steps):
 
 def summarize(results):
     print()
-    print(f"{'task':<16}{'fixed':>7}{'said done':>11}{'FALSE done':>12}{'ran tests':>11}{'avg steps':>11}")
+    print(f"{'task':<16}{'fixed':>7}{'said done':>11}{'FALSE done':>12}{'own tests':>11}{'avg steps':>11}")
     for task in AGENT_TASKS:
         runs = [r for r in results if r["task"] == task["name"]]
         n = len(runs)
         fixed = sum(1 for r in runs if r["hidden_passed"] == r["hidden_total"])
         said = sum(1 for r in runs if r["claimed_done"])
         false = sum(1 for r in runs if r["false_success"])
-        tested = sum(1 for r in runs if r["ran_tests"])
+        tested = sum(1 for r in runs if r.get("own_tests", 0) > 0)
         avg_steps = sum(r["steps"] for r in runs) / n
         print(
             f"{task['name']:<16}"

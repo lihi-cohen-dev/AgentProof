@@ -50,6 +50,19 @@ flowchart LR
     D --> B
     E --> B
     C -->|done| F[Run HIDDEN tests]
+   **5. Letting the agent write its own tests did not fix it either.**
+I added a fifth action, `add_test`, and told the agent to add tests for edge cases before saying "done". It used the tool in all 15 runs, but its tests were wrong:
+
+| Task | A test the agent wrote | The problem |
+|---|---|---|
+| fix_split_bill | `split_bill(10, 3)` should return `[3, 3, 4]` | Opposite order to the given test `[3, 3, 2, 2]` |
+| fix_decode | `decode("a1b2c3")` should return `"abbcddd"` | Wrong answer (correct: `"abbccc"`) |
+| fix_next_bus | `next_bus("18:00", "16:00")` | Wrong input type: one time instead of a list of times |
+
+None of its 15 test sets checked a hidden edge case. The agent then spent its steps "fixing" correct code to satisfy its own wrong tests, and ran out of steps in 14 of 15 runs. False success dropped (1 instead of 7), but only because the agent almost never finished, and it fixed `fix_next_bus` in only 1 of 5 runs. In the one run where it did say "done", its own test was still failing: *"The split_bill function has been fixed, but additional tests are needed to fully cover edge cases."*
+
+An agent that misunderstands the task writes tests that share the misunderstanding. Self-checking is not independent checking.
+   
     F --> G[Fixed? Said done? False success?]
 ```
 

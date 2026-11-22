@@ -6,8 +6,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 TASKS = ["fix_split_bill", "fix_decode", "fix_next_bus"]
-COLORS = {"no_hint": "#2a78d6", "edge_cases": "#eb6834"}
-NAMES = {"no_hint": "Without hint", "edge_cases": "With \"think about edge cases\" hint"}
+COLORS = {"no_hint": "#2a78d6", "edge_cases": "#eb6834", "self_tests": "#1baf7a"}
+NAMES = {"no_hint": "No hint", "edge_cases": "\"Think about edge cases\" hint", "self_tests": "Agent writes its own tests"}
 
 
 def latest_file_per_variant():
@@ -32,14 +32,14 @@ def count(results, task, key):
 
 def main():
     data = latest_file_per_variant()
-    variants = [v for v in ("no_hint", "edge_cases") if v in data]
+    variants = [v for v in ("no_hint", "edge_cases", "self_tests") if v in data]
     for v in variants:
         print(f"{NAMES[v]}: {data[v][0]}")
 
     plt.rcParams["font.family"] = "DejaVu Sans"
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.6), sharey=True)
     panels = [("false", "Said \"done\" but the code was broken"), ("fixed", "Actually fixed (hidden tests pass)")]
-    width = 0.36
+    width = 0.26
     runs_per_task = 5
 
     for ax, (key, title) in zip(axes, panels):
@@ -68,8 +68,8 @@ def main():
     axes[0].set_ylabel(f"Runs (out of {runs_per_task})", color="#52514e", fontsize=10)
 
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper left", bbox_to_anchor=(0.055, 0.905), ncol=2, frameon=False, fontsize=10)
-    fig.suptitle("A prompt hint did not stop the agent from claiming false success",
+    fig.legend(handles, labels, loc="upper left", bbox_to_anchor=(0.055, 0.905), ncol=3, frameon=False, fontsize=10)
+    fig.suptitle("Neither a hint nor self-written tests made the agent reliable",
                  x=0.06, y=0.985, ha="left", fontsize=14, fontweight="bold", color="#0b0b0b")
     fig.patch.set_facecolor("#fcfcfb")
     for ax in axes:
