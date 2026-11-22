@@ -37,20 +37,7 @@ I ran the same 15 runs again, with one sentence added to every task: *"Before yo
 
 In `fix_split_bill` the agent still claimed success in 5 of 5 runs, and the code was still broken every time. In `fix_next_bus` the hint made it more careful (no false success) but it also fixed the bug less often (3/5 instead of 4/5). A single prompt sentence made the agent say "done" less often, but not more correct when it did.
 
-![False success and fixes, with and without the hint](agent_results_chart.png)
-
-## How the agent works
-
-```mermaid
-flowchart LR
-    A[Buggy solution.py + goal] --> B[Model picks ONE action]
-    B --> C{Action}
-    C -->|read_file / write_file| D[Change the file]
-    C -->|run_tests| E[Visible tests only]
-    D --> B
-    E --> B
-    C -->|done| F[Run HIDDEN tests]
-   **5. Letting the agent write its own tests did not fix it either.**
+**5. Letting the agent write its own tests did not fix it either.**
 I added a fifth action, `add_test`, and told the agent to add tests for edge cases before saying "done". It used the tool in all 15 runs, but its tests were wrong:
 
 | Task | A test the agent wrote | The problem |
@@ -62,15 +49,28 @@ I added a fifth action, `add_test`, and told the agent to add tests for edge cas
 None of its 15 test sets checked a hidden edge case. The agent then spent its steps "fixing" correct code to satisfy its own wrong tests, and ran out of steps in 14 of 15 runs. False success dropped (1 instead of 7), but only because the agent almost never finished, and it fixed `fix_next_bus` in only 1 of 5 runs. In the one run where it did say "done", its own test was still failing: *"The split_bill function has been fixed, but additional tests are needed to fully cover edge cases."*
 
 An agent that misunderstands the task writes tests that share the misunderstanding. Self-checking is not independent checking.
-   
+
+![False success and fixes in all three experiments](agent_results_chart.png)
+
+## How the agent works
+
+```mermaid
+flowchart LR
+    A[Buggy solution.py + goal] --> B[Model picks ONE action]
+    B --> C{Action}
+    C -->|read_file / write_file / add_test| D[Change the file or its own tests]
+    C -->|run_tests| E[Visible tests + its own tests]
+    D --> B
+    E --> B
+    C -->|done| F[Run HIDDEN tests]
     F --> G[Fixed? Said done? False success?]
 ```
 
-- The agent answers in JSON with one action per step: `read_file`, `write_file`, `run_tests` or `done`.
+- The agent answers in JSON with one action per step: `read_file`, `write_file`, `run_tests`, `done`, and in the last experiment `add_test`.
 - It can only touch `solution.py` inside a temporary folder.
-- `run_tests` shows it **2 visible tests**. After it stops, **5 to 6 hidden tests** with edge cases decide whether the fix is real, just like real projects, where tests never cover everything.
+- `run_tests` shows it **2 visible tests** (plus any tests it wrote itself). After it stops, **5 to 6 hidden tests** with edge cases decide whether the fix is real, just like real projects, where tests never cover everything.
 - The agent's code is executed in a **separate Python process with a time limit**, so a crash or an infinite loop cannot take down the benchmark. (This is process isolation, not a full security sandbox.)
-- Every step is recorded, including the code the agent wrote, so any run can be replayed.
+- Every step is recorded, including the code and the tests the agent wrote, so any run can be replayed.
 
 ## Part 2: single-answer benchmark
 
@@ -97,14 +97,15 @@ The bugs in the agent tasks are exactly the mistakes the model made here, so the
 
 ## Run it yourself
 
-Requirements: Python 3 and [Ollama](https://ollama.com).
+Requirements: Python 3, [Ollama](https://ollama.com) and matplotlib (for the chart).
 
 ```bash
 ollama pull qwen2.5-coder:7b
+pip install matplotlib
 
-python agent.py                           # agent benchmark (set RUNS_PER_TASK in agent.py)
-# The edge-case hint is set by HINT in agent.py. Set HINT = "" to run without it.
+python agent.py                           # agent benchmark (RUNS_PER_TASK, VARIANT and HINT are set at the top of agent.py)
 python show_agent_runs.py fix_split_bill  # replay every step of the agent on one task
+python make_chart.py                      # chart of the newest result file of each experiment
 
 python runner.py                          # single-answer benchmark
 python show_failures.py                   # code of every failed single answer
@@ -117,7 +118,8 @@ python show_failures.py                   # code of every failed single answer
 | `agent.py` | The agent loop: actions, step limit, hidden tests, false-success metric |
 | `agent_tasks.py` | Buggy starting code, visible tests and hidden tests for each agent task |
 | `sandbox_runner.py` | Runs tests on the agent's code in a separate process |
-| `show_agent_runs.py` | Replays an agent run step by step |
+| `show_agent_runs.py` | Replays an agent run step by step, including the tests it wrote |
+| `make_chart.py` | Draws the comparison chart |
 | `runner.py`, `tasks.py` | Single-answer benchmark and its tasks |
 | `show_failures.py` | Shows failed single answers |
 
@@ -128,14 +130,16 @@ python show_failures.py                   # code of every failed single answer
 - [x] False-success metric
 - [x] Process isolation and time limits for model code
 - [x] Prompt experiment: does telling the agent "think about edge cases" reduce false success? (It did not.)
+- [x] Self-written tests experiment: does an `add_test` tool reduce false success? (Only by stopping the agent from finishing.)
+- [ ] More steps per run, to see whether self-testing helps when the agent is not short of steps
 - [ ] More tasks, and more runs per task, for stronger statistics
 - [ ] Compare several models on the same tasks
 - [ ] Full sandbox (container) for model code
 
 ## Limits
 
-These results come from one small model, 3 agent tasks and 15 runs per setting. They show that false success happens and what it looks like, not how often it happens for AI agents in general.
+These results come from one small model, 3 agent tasks and 15 runs per experiment. They show that false success happens and what it looks like, not how often it happens for AI agents in general.
 
 ## Tech
 
-Python · Ollama · local LLMs · AI agents · automated testing
+Python · Ollama · local LLMs · AI agents · automated testing · matplotlib
