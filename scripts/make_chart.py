@@ -16,8 +16,8 @@ def latest_file_per_variant():
     for path in sorted(glob.glob("agent_results_*.json")):
         with open(path, encoding="utf-8") as file:
             results = json.load(file)
-        if not results:
-            continue
+        if not results or results[0].get("model") == "scripted":
+            continue  # empty file, or a demo run with the fake model
         variant = results[0].get("variant", "no_hint")
         latest[variant] = (path, results)
     return latest
