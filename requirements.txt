@@ -1,0 +1,3 @@
+# The benchmark itself uses only the Python standard library.
+# matplotlib is needed only for scripts/make_chart.py.
+matplotlib>=3.8
