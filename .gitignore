@@ -1,3 +1,17 @@
+# Python
 __pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Benchmark output (each run creates new files; summaries go in the README)
 results_*.json
 agent_results_*.json
+*.db
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
